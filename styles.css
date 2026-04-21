@@ -500,9 +500,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
 .leaflet-popup-tip { background: var(--surface) !important; }
 .leaflet-popup-close-button { color: var(--muted2) !important; }
 
-/* ════════════════════════════════════════
-   MOBILE — tudo abaixo de 768px
-   ════════════════════════════════════════ */
+/* MOBILE — tudo abaixo de 768px  */
 @media (max-width: 767px) {
   /* O mapa ocupa tudo */
   #app { flex-direction: column; }
@@ -520,7 +518,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
     transform: translateY(100%);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 950;
-    /* Não usa width transition no mobile */
   }
   #panel.panel-open {
     transform: translateY(0);
@@ -619,9 +616,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
   .panel-inputs { padding: 12px 20px; }
 }
 
-/* ════════════════════════════════════════
-   TABLET — 768px a 1024px
-   ════════════════════════════════════════ */
+/* TABLET — 768px a 1024px  */
 @media (min-width: 768px) and (max-width: 1024px) {
   :root { --panel: 300px; }
 
@@ -633,9 +628,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg);
   }
 }
 
-/* ════════════════════════════════════════
-   DESKTOP — acima de 1024px
-   ════════════════════════════════════════ */
+/* DESKTOP — acima de 1024px */
 @media (min-width: 1025px) {
   /* Toggle fica centralizado verticalmente no mapa */
   .panel-toggle {

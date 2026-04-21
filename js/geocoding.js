@@ -50,7 +50,7 @@ export function setupInputSearch(inputId, sugId, type) {
           placeMarker(type, lat, lon, el.dataset.name);
           map.setView([lat, lon], 14);
           sug.style.display = 'none';
-          input.value = el.dataset.name.split(',')[0]; // Atualiza input
+          input.value = el.dataset.name.split(',')[0];
         });
       });
     }, 400);

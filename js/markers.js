@@ -40,5 +40,5 @@ export function placeMarker(type, lat, lon, label) {
   }
   
   updateRunBtn();
-  resetAlgoUI(); // Limpa rota anterior quando muda ponto
+  resetAlgoUI();
 }
