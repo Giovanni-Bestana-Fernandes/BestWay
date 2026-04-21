@@ -62,13 +62,8 @@ export async function calculateRoute() {
   const url = `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true&annotations=true`;
 
   try {
-    console.log('Chamando OSRM com perfil:', profile);
-    console.log('URL:', url);
-    
     const res = await fetch(url);
     const data = await res.json();
-    
-    console.log('Resposta OSRM:', data);
 
     if (!data.routes || !data.routes.length) {
       addLog('path', '<strong>Nenhuma rota encontrada</strong> entre os pontos selecionados.');
@@ -113,8 +108,6 @@ export async function calculateRoute() {
     setProgress(100, 'Rota calculada com sucesso!');
     addLog('done', `✅ <strong>Rota otimizada pronta!</strong> ${distKm} km • ${durMin} min`);
 
-    console.log(`📊 Atualizando UI - Modo: ${state.mode}, Distância: ${distKm}km, Tempo: ${durMin}min, Velocidade: ${speedAvg}km/h`);
-    
     updateStats(distKm, durMin, nodesEst, speedAvg);
     renderDirections(route.legs[0]?.steps || []);
 
