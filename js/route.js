@@ -22,29 +22,53 @@ export async function calculateRoute() {
   const logContainer = document.getElementById('logEntries');
   if (logContainer) logContainer.innerHTML = '';
 
-  // Logs iniciais
+  const profileMap = {
+    'driving': 'driving',
+    'cycling': 'cycling',
+    'walking': 'walking'
+  };
+  
+  const profile = profileMap[state.mode] || 'driving';
+  const modeNames = {
+    'driving': 'Carro 🚗',
+    'cycling': 'Bicicleta 🚴',
+    'walking': 'A pé 🚶'
+  };
+
+  // Velocidade média fixa por perfil (km/h)
+  // Evita depender da duração retornada pela OSRM, que pode ser cacheada
+  const avgSpeeds = {
+    driving: 50,
+    cycling: 15,
+    walking: 5
+  };
+
   setProgress(5, 'Conectando ao servidor de rotas...');
   addLog('start', `Iniciando algoritmo <strong>A*</strong> + OSRM`);
   addLog('start', `Origem: <strong>${state.src.label.split(',')[0]}</strong>`);
   addLog('start', `Destino: <strong>${state.dst.label.split(',')[0]}</strong>`);
-  addLog('start', `Modo: <strong>${{driving:'Carro 🚗',cycling:'Bicicleta 🚴',walking:'A pé 🚶'}[state.mode]}</strong>`);
+  addLog('start', `Modo: <strong>${modeNames[state.mode]}</strong>`);
 
   await sleep(300);
   setProgress(20, 'Buscando grafo de ruas (OSM)...');
-  addLog('explore', 'Carregando grafo da rede viária OpenStreetMap');
+  addLog('explore', `Carregando grafo da rede viária para ${modeNames[state.mode]}`);
 
   await sleep(400);
-  setProgress(40, 'Executando Dijkstra...');
+  setProgress(40, 'Executando algoritmo de roteamento...');
   addLog('explore', 'Expandindo nós da fila de prioridade');
   addLog('explore', 'Relaxando arestas do grafo...');
 
   const coords = `${state.src.lon},${state.src.lat};${state.dst.lon},${state.dst.lat}`;
-  const profile = state.mode === 'driving' ? 'car' : state.mode === 'cycling' ? 'bike' : 'foot';
-  const url = `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true&annotations=false`;
+  const url = `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson&steps=true&annotations=true`;
 
   try {
+    console.log('Chamando OSRM com perfil:', profile);
+    console.log('URL:', url);
+    
     const res = await fetch(url);
     const data = await res.json();
+    
+    console.log('Resposta OSRM:', data);
 
     if (!data.routes || !data.routes.length) {
       addLog('path', '<strong>Nenhuma rota encontrada</strong> entre os pontos selecionados.');
@@ -56,33 +80,44 @@ export async function calculateRoute() {
 
     const route = data.routes[0];
     const distKm = (route.distance / 1000).toFixed(1);
-    const durMin = Math.round(route.duration / 60);
-    const speedAvg = Math.round(route.distance / route.duration * 3.6);
-    const nodesEst = Math.round(route.distance / 80);
+
+    // Calcula velocidade e tempo com base no perfil atual,
+    // ignorando o duration da OSRM (que pode ser idêntico entre perfis por cache)
+    const speedAvg = avgSpeeds[state.mode] || 50;
+    const durMin = Math.round((route.distance / 1000) / speedAvg * 60);
+
+    // Estimativa de nós explorados baseada na distância e perfil
+    let nodesEst;
+    if (state.mode === 'driving') {
+      nodesEst = Math.round(route.distance / 50);
+    } else if (state.mode === 'cycling') {
+      nodesEst = Math.round(route.distance / 30);
+    } else {
+      nodesEst = Math.round(route.distance / 20);
+    }
 
     setProgress(70, 'Caminho mais curto encontrado!');
     addLog('settle', `<strong>Caminho mínimo encontrado</strong> após ~${nodesEst} nós explorados`);
     addLog('settle', `Distância total: <strong>${distKm} km</strong>`);
     addLog('settle', `Duração estimada: <strong>${durMin} min</strong>`);
+    addLog('explore', `Velocidade média (${modeNames[state.mode]}): ${speedAvg} km/h`);
+    addLog('explore', `📊 Dados OSRM - Distância: ${distKm}km | Tempo: ${durMin}min | Velocidade: ${speedAvg}km/h`);
 
     await sleep(300);
     setProgress(90, 'Renderizando rota no mapa...');
     addLog('path', 'Traçando rota no mapa...');
 
-    // Desenha rota com efeito
     drawRoute(route.geometry.coordinates);
 
     await sleep(400);
     setProgress(100, 'Rota calculada com sucesso!');
     addLog('done', `✅ <strong>Rota otimizada pronta!</strong> ${distKm} km • ${durMin} min`);
 
-    // Atualiza estatísticas
+    console.log(`📊 Atualizando UI - Modo: ${state.mode}, Distância: ${distKm}km, Tempo: ${durMin}min, Velocidade: ${speedAvg}km/h`);
+    
     updateStats(distKm, durMin, nodesEst, speedAvg);
-
-    // Renderiza direções
     renderDirections(route.legs[0]?.steps || []);
 
-    // Ajusta mapa
     if (layers.route) {
       map.fitBounds(layers.route.getBounds(), { padding: [60, 80] });
     }
@@ -100,9 +135,12 @@ export async function calculateRoute() {
 function drawRoute(coords) {
   const latlngs = coords.map(c => [c[1], c[0]]);
 
-  // Shadow/glow effect
+  let routeColor = '#00e5a0';
+  if (state.mode === 'cycling') routeColor = '#ffcc00';
+  if (state.mode === 'walking') routeColor = '#ff5c8a';
+
   const glow = L.polyline(latlngs, {
-    color: '#00e5a0', weight: 10, opacity: 0.08, lineCap: 'round', lineJoin: 'round'
+    color: routeColor, weight: 10, opacity: 0.08, lineCap: 'round', lineJoin: 'round'
   }).addTo(map);
   layers.anim.push(glow);
 
@@ -112,6 +150,6 @@ function drawRoute(coords) {
   layers.anim.push(outer);
 
   layers.route = L.polyline(latlngs, {
-    color: '#00e5a0', weight: 3, opacity: 0.95, lineCap: 'round', lineJoin: 'round'
+    color: routeColor, weight: 3, opacity: 0.95, lineCap: 'round', lineJoin: 'round'
   }).addTo(map);
 }
